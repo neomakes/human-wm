@@ -50,6 +50,31 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
+# macOS Sleep 모드 감지 (caffeinate 확인)
+# ============================================================================
+
+def check_caffeinate():
+    """
+    macOS에서 caffeinate로 실행 중인지 확인
+    프로세스 완료 후 절전 모드가 자동으로 복구됨
+    """
+    if sys.platform == "darwin":  # macOS만
+        try:
+            parent_pid = os.getppid()
+            parent_process = os.popen(f"ps -p {parent_pid} -o comm=").read().strip()
+            
+            if "caffeinate" in parent_process:
+                logger.info("✅ caffeinate 감지됨 - Sleep 모드가 방지되고 있습니다")
+                logger.info("💡 프로세스 완료 후 절전 모드가 자동으로 복구됩니다")
+            else:
+                logger.warning("⚠️  caffeinate 없이 실행 중입니다")
+                logger.warning("💡 권장: caffeinate -i python scripts/train.py ...")
+                logger.warning("💡 또는: make train-safe")
+        except Exception as e:
+            logger.debug(f"caffeinate 확인 실패: {e}")
+
+
+# ============================================================================
 # Early Stopping 클래스
 # ============================================================================
 
@@ -469,7 +494,12 @@ def main(cfg: DictConfig):
         cfg: Hydra 설정
     """
     # ========================================================================
-    # 0. 로깅 설정
+    # 0. Sleep 모드 확인 (macOS)
+    # ========================================================================
+    check_caffeinate()
+    
+    # ========================================================================
+    # 1. 로깅 설정
     # ========================================================================
     # HydraConfig에서 런타임 정보 얻기
     from hydra.core.hydra_config import HydraConfig

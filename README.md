@@ -4,9 +4,13 @@
 [![Hydra](https://img.shields.io/badge/Config-Hydra-89b8cd.svg)](https://hydra.cc/)
 [![W&B](https://img.shields.io/badge/Logging-W%26B-yellow.svg)](https://wandb.ai)
 
-> ✅ **2025-12-07 업데이트**: NaN 문제 완전 해결! 모든 에포크에서 안정적인 훈련 확인 (Epoch 1-3: Loss 정상)
+> ✅ **2025-12-07 업데이트**: 조기 종료 + 순차 실험 자동 실행 시스템 완성!
 > 
-> 자세한 내용은 [`NAN_FIX_SUMMARY.md`](NAN_FIX_SUMMARY.md) 참조
+> 📖 새로운 기능:
+> - [**순차 실험 가이드**](HOW_TO_RUN_EXPERIMENTS.md) ← 여기서 시작하세요! 🚀
+> - [전체 실험 가이드](docs/EXPERIMENTS_GUIDE.md)
+> - [빠른 참조](docs/QUICK_START_EXPERIMENTS.md)
+> - [기술 상세](docs/EXPERIMENTS_SUMMARY.md)
 
 ## 📌 프로젝트 개요
 
@@ -278,6 +282,49 @@ python scripts/train.py \
   training.batch_size=32 \
   training.learning_rate=0.001 \
   model.hidden_dim=256 \
+```
+
+### 5. 순차 실험 실행 (NEW!) 🎉
+
+**여러 실험을 한 번에 순차적으로 실행하고, 각 실험이 조기 종료되면 자동으로 다음 실험 시작:**
+
+```bash
+# Python으로 직접 실행
+python scripts/run_experiments.py
+
+# 또는 셸 스크립트 사용
+bash scripts/run_all_experiments.sh
+
+# 백그라운드에서 밤새 실행
+nohup python scripts/run_experiments.py > logs/experiments.log 2>&1 &
+
+# 빠른 테스트용 (에포크=20, W&B 미사용)
+python scripts/quick_test.py
+```
+
+**자동 실행되는 5개 실험:**
+1. **Baseline**: 기본 설정 (hidden_dim=256, 2 layers)
+2. **Deep Model**: 더 깊은 모델 (hidden_dim=256, 3 layers)
+3. **Wide Model**: 더 넓은 모델 (hidden_dim=512, 2 layers)
+4. **Large Latent**: 큰 잠재 차원 (z_a=32, z_b=64, z_c=64)
+5. **Optimized**: 모든 최적화 적용 (512 hidden + large latent + lr=0.0005)
+
+**결과 확인:**
+```bash
+# 실험 결과 요약 (JSON)
+cat logs/experiments_results.json
+
+# W&B 대시보드
+# https://wandb.ai/your-username/fitness-tracker
+```
+
+자세한 정보는 [`docs/EXPERIMENTS_GUIDE.md`](docs/EXPERIMENTS_GUIDE.md) 참조
+
+---
+
+## ⚙️ 하이퍼파라미터 설정
+
+### 모델 하이퍼파라미터 (`conf/model/vrae.yaml`)
   training.kl_annealing_end=20 \
   training.use_wandb=false
 ```
