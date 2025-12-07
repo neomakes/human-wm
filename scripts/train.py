@@ -18,6 +18,7 @@ train.py: VRAE 모델 학습 스크립트
 
 import os
 import sys
+import time
 import numpy as np
 import pandas as pdf
 from pathlib import Path
@@ -276,9 +277,10 @@ def train_step(
     w_action: float = 0.5,
     w_transition: float = 0.5,
     w_rollout: float = 0.3,
-) -> Dict[str, mx.array]:
+) -> Tuple[Dict[str, mx.array], Dict[str, float]]:
     """
     단일 학습 스텝 (VAE + 정책 + 천이 + 롤아웃 손실)
+    시간 측정 포함
     
     Args:
         model: VRAE 모델
@@ -293,41 +295,56 @@ def train_step(
         w_vae, w_action, w_transition, w_rollout: 손실 가중치
     
     Returns:
-        metrics_dict
+        (metrics_dict, timings_dict)
     """
+    timings = {}
+    
     def loss_fn(model):
-        # 이 함수는 전체 손실과 로깅을 위한 개별 메트릭을 함께 반환합니다.
         # 1. 인코더
+        t_encode = time.time()
         mu_a, sigma_a, mu_b, sigma_b, mu_c, sigma_c = model.encode(batch_a, batch_s, batch_w, batch_m)
+        timings['encode'] = time.time() - t_encode
 
         # 2. 샘플링
+        t_sample = time.time()
         z_a, z_b, z_c = model.sample_latents(mu_a, sigma_a, mu_b, sigma_b, mu_c, sigma_c)
+        timings['sample'] = time.time() - t_sample
         
         # 3. 디코더 (재구성)
+        t_decode = time.time()
         a_recon, s_recon = model.decode(z_a, z_b, z_c, batch_w)
+        timings['decode'] = time.time() - t_decode
 
         # 4. VAE 손실
+        t_vae = time.time()
         vae_loss, vae_metrics = model.loss_function(
             batch_a, batch_s, batch_w, batch_m,
             mu_a, sigma_a, mu_b, sigma_b, mu_c, sigma_c,
             a_recon, s_recon,
             kld_weight=kld_weight,
         )
+        timings['vae_loss'] = time.time() - t_vae
 
         # 5. 정책 손실: π(a_t | s_t, w_t; z_b)
+        t_policy = time.time()
         action_loss = model.compute_policy_loss(
             batch_a, batch_s, batch_w, batch_m, z_b[:, 0], distance_type, huber_delta
         )
+        timings['policy_loss'] = time.time() - t_policy
 
         # 6. 천이 손실: τ(s_{t+1} | s_t, a_t, w_t; z_c)
+        t_transition = time.time()
         transition_loss = model.compute_transition_loss(
             batch_s, batch_a, batch_w, batch_m, z_c[:, 0], distance_type, huber_delta
         )
+        timings['transition_loss'] = time.time() - t_transition
 
         # 7. 롤아웃 손실: 125개 생성 궤적과 실제 궤적의 거리
+        t_rollout = time.time()
         rollout_loss = model.compute_rollout_loss(
             batch_a, batch_s[:, 0], batch_w, batch_m, z_a, z_b, z_c, distance_type, huber_delta
         )
+        timings['rollout_loss'] = time.time() - t_rollout
 
         # 8. 전체 손실 (가중치 적용 및 배치 평균)
         total_loss = (
@@ -351,28 +368,38 @@ def train_step(
         
         return total_loss, metrics
     
-    # 1. 손실과 그래디언트 계산
+    t_total = time.time()
+    
+    # 손실과 그래디언트 계산
+    t_grad = time.time()
     loss_and_grad_fn = nn.value_and_grad(model, loss_fn)
     (loss, metrics), grads = loss_and_grad_fn(model)
+    timings['grad_compute'] = time.time() - t_grad
     
     # NaN 체크 (Epoch 2+ 디버깅)
     total_loss_value = metrics['total_loss']
     if mx.isnan(total_loss_value):
         logger.warning(f"⚠️  NaN loss detected! VAE: {metrics['vae_loss']:.4f}, Action: {metrics['action_loss']:.4f}, Transition: {metrics['transition_loss']:.4f}, Rollout: {metrics['rollout_loss']:.4f}")
     
-    # 2. 그래디언트 클리핑 (기울기 폭발 방지)
+    # 그래디언트 클리핑 (기울기 폭발 방지)
+    t_clip = time.time()
     def clip_gradient(g):
         if hasattr(g, 'ndim') and g.ndim > 0:
             return mx.clip(g, a_min=-1.0, a_max=1.0)
         return g
     
     grads = tree_map(clip_gradient, grads)
+    timings['grad_clip'] = time.time() - t_clip
     
-    # 3. 옵티마이저 업데이트
+    # 옵티마이저 업데이트
+    t_optim = time.time()
     optimizer.update(model, grads)
     mx.eval(model.parameters(), optimizer.state)
+    timings['optimizer'] = time.time() - t_optim
     
-    return metrics
+    timings['total'] = time.time() - t_total
+    
+    return metrics, timings
 
 # ============================================================================
 # 3. 메인 학습 함수
@@ -458,6 +485,7 @@ def main(cfg: DictConfig):
         latent_dim_b=cfg.model.latent_policy_dim,
         latent_dim_c=cfg.model.latent_transition_dim,
         rnn_hidden_dim=cfg.model.hidden_dim,
+        mlp_hidden_dim=cfg.model.hidden_dim,  # MLP도 동일 차원 사용
         distance_type=cfg.model.distance_type,
         huber_delta=cfg.model.huber_delta,
         kld_weight=cfg.model.get('w_vae', 1.0),
@@ -558,7 +586,7 @@ def main(cfg: DictConfig):
             batch_m = mx.array(masks[batch_indices])    # (B, T, 1)
             
             # 학습 스텝
-            metrics = train_step(
+            metrics, timings = train_step(
                 model=model,
                 optimizer=optimizer,
                 batch_a=batch_a,
@@ -580,14 +608,43 @@ def main(cfg: DictConfig):
 
             # 배치 상세 로깅 (첫 배치와 문제 발생 시)
             if batch_idx == 0 or mx.isnan(metrics['total_loss']):
-                batch_log = (
-                    f"  Batch {batch_idx}: Total={metrics['total_loss'].item():.4f} | "
-                    f"VAE={metrics['vae_loss'].item():.4f} | "
-                    f"Action={metrics['action_loss'].item():.4f} | "
-                    f"Transition={metrics['transition_loss'].item():.4f} | "
-                    f"Rollout={metrics['rollout_loss'].item():.4f}"
+                # 시간 정보 로깅
+                timing_str = (
+                    f"[Timings] Encode: {timings['encode']:.3f}s | "
+                    f"Sample: {timings['sample']:.3f}s | "
+                    f"Decode: {timings['decode']:.3f}s | "
+                    f"VAE: {timings['vae_loss']:.3f}s | "
+                    f"Policy: {timings['policy_loss']:.3f}s | "
+                    f"Transition: {timings['transition_loss']:.3f}s | "
+                    f"Rollout: {timings['rollout_loss']:.3f}s | "
+                    f"GradComp: {timings['grad_compute']:.3f}s | "
+                    f"GradClip: {timings['grad_clip']:.3f}s | "
+                    f"Optimizer: {timings['optimizer']:.3f}s | "
+                    f"Total: {timings['total']:.3f}s"
                 )
-                logger.info(batch_log)
+                logger.info(
+                    f"  Batch {batch_idx}: Total={metrics['total_loss']:.4f} | VAE={metrics['vae_loss']:.4f} | "
+                    f"Recon_A={metrics['recon_loss_action']:.4f} | Recon_S={metrics['recon_loss_state']:.4f} | "
+                    f"KL={metrics['kl_loss']:.4f} | Action={metrics['action_loss']:.4f} | "
+                    f"Transition={metrics['transition_loss']:.4f} | Rollout={metrics['rollout_loss']:.4f}"
+                )
+                logger.info(timing_str)
+                
+                # W&B에도 시간 정보 로깅
+                if cfg.training.use_wandb and wandb_run is not None:
+                    wandb.log({
+                        'batch_timings/encode': timings['encode'],
+                        'batch_timings/sample': timings['sample'],
+                        'batch_timings/decode': timings['decode'],
+                        'batch_timings/vae_loss': timings['vae_loss'],
+                        'batch_timings/policy_loss': timings['policy_loss'],
+                        'batch_timings/transition_loss': timings['transition_loss'],
+                        'batch_timings/rollout_loss': timings['rollout_loss'],
+                        'batch_timings/grad_compute': timings['grad_compute'],
+                        'batch_timings/grad_clip': timings['grad_clip'],
+                    'batch_timings/optimizer': timings['optimizer'],
+                    'batch_timings/total': timings['total'],
+                    })
 
             # 모든 배치마다 wandb 로깅 (use_wandb=True인 경우)
             if wandb_run is not None:

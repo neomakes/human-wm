@@ -762,10 +762,30 @@ class VRAE(nn.Module):
         정책 손실 계산: π(a_t | s_t, w_t; z_b)
         
         마스킹 기반으로 유효한 시점만 손실 계산
+        성능 최적화: 배치의 일부만 계산 (매 시점이 아닌 샘플링된 시점만)
         """
-        a_pred = self.policy(s, w, mx.expand_dims(z_b_sample, 1))
-        mask = (m < 0.5).astype(mx.float32)
-        return DistanceMetric.compute(a_pred, a, distance_type, mask=mask, delta=huber_delta)
+        B, T, _ = s.shape
+        
+        # 성능 최적화: 100개 시점만 샘플링하여 계산 (전체 1000개 대신)
+        if T > 100:
+            step = T // 100
+            indices = mx.arange(0, T, step)[:100]
+            s_sampled = s[:, indices, :]
+            a_sampled = a[:, indices, :]
+            m_sampled = m[:, indices, :]
+        else:
+            s_sampled = s
+            a_sampled = a
+            m_sampled = m
+        
+        # z_b를 배치에 맞게 확장
+        z_b_expanded = mx.expand_dims(z_b_sample, 1)  # (B, 1, latent_dim_b)
+        
+        a_pred = self.policy(s_sampled, w[:, :s_sampled.shape[1], :] if w.shape[1] > s_sampled.shape[1] else w, z_b_expanded)
+        mask = (m_sampled < 0.5).astype(mx.float32)
+        loss = DistanceMetric.compute(a_pred, a_sampled, distance_type, mask=mask, delta=huber_delta)
+        
+        return loss
 
     def _compute_policy_loss_single(self, a, s, w, m, z_b_sample, distance_type, huber_delta):
         """단일 데이터에 대한 정책 손실 계산 (벡터화)"""
@@ -788,16 +808,31 @@ class VRAE(nn.Module):
         천이 손실 계산: τ(s_{t+1} | s_t, a_t, w_t; z_c)
         
         마스킹 기반으로 유효한 시점만 손실 계산
+        성능 최적화: 배치의 일부만 계산 (매 시점이 아닌 샘플링된 시점만)
         """
-        s_t = s[:, :-1]
-        s_t_plus_1 = s[:, 1:]
-        a_t = a[:, :-1]
-        w_t = w[:, :-1]
-        m_t = m[:, :-1]
+        B, T, _ = s.shape
+        
+        # 성능 최적화: 100개 시점만 샘플링하여 계산 (전체 999개 대신)
+        if T > 101:  # T-1 시점이므로
+            step = (T - 1) // 100
+            indices = mx.arange(0, T - 1, step)[:100]
+        else:
+            indices = mx.arange(0, T - 1)
+        
+        s_t = s[:, indices, :]
+        s_t_plus_1 = s[:, indices + 1, :]
+        a_t = a[:, indices, :]
+        w_t = w[:, indices, :] if w.shape[1] > indices.max() else w[:, :s_t.shape[1], :]
+        m_t = m[:, indices, :]
 
-        s_next_pred = self.transition(s_t, a_t, w_t, mx.expand_dims(z_c_sample, 1))
+        # z_c를 배치에 맞게 확장
+        z_c_expanded = mx.expand_dims(z_c_sample, 1)  # (B, 1, latent_dim_c)
+        
+        s_next_pred = self.transition(s_t, a_t, w_t, z_c_expanded)
         mask = (m_t < 0.5).astype(mx.float32)
-        return DistanceMetric.compute(s_next_pred, s_t_plus_1, distance_type, mask=mask, delta=huber_delta)
+        loss = DistanceMetric.compute(s_next_pred, s_t_plus_1, distance_type, mask=mask, delta=huber_delta)
+        
+        return loss
 
 
     def _compute_transition_loss_single(self, s, a, w, m, z_c_sample, distance_type, huber_delta):
