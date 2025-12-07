@@ -60,24 +60,16 @@ def check_caffeinate():
     """
     if sys.platform == "darwin":  # macOS만
         try:
-            parent_pid = os.getppid()
-            # subprocess를 사용한 더 안정적인 방식
-            import subprocess
-            result = subprocess.run(
-                ["ps", "-p", str(parent_pid), "-o", "comm="],
-                capture_output=True,
-                text=True,
-                timeout=2
-            )
-            parent_process = result.stdout.strip()
-            
-            if "caffeinate" in parent_process:
+            # 환경 변수로 caffeinate 활성화 여부 확인
+            if os.environ.get('CAFFEINATE_ENABLED') == '1':
                 logger.info("✅ caffeinate 감지됨 - Sleep 모드가 방지되고 있습니다")
                 logger.info("💡 프로세스 완료 후 절전 모드가 자동으로 복구됩니다")
+                return True
             else:
                 logger.warning("⚠️  caffeinate 없이 실행 중입니다")
                 logger.warning("💡 권장: caffeinate -i python scripts/train.py ...")
                 logger.warning("💡 또는: make train-safe")
+                return False
         except Exception as e:
             logger.debug(f"caffeinate 확인 실패: {e}")
 

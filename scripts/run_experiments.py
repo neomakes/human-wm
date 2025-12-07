@@ -40,29 +40,39 @@ logger = logging.getLogger(__name__)
 def check_caffeinate():
     """
     macOS에서 caffeinate로 실행 중인지 확인
-    프로세스 완료 후 절전 모드가 자동으로 복구됨
+    환경 변수를 통해 감지
     """
     if sys.platform == "darwin":  # macOS만
         try:
-            parent_pid = os.getppid()
-            # ps 명령어로 부모 프로세스 확인 (더 안정적)
-            result = subprocess.run(
-                ["ps", "-p", str(parent_pid), "-o", "comm="],
-                capture_output=True,
-                text=True,
-                timeout=2
-            )
-            parent_process = result.stdout.strip()
-            
-            if "caffeinate" in parent_process:
+            # 방법 1: 환경 변수 확인 (Makefile/shell에서 설정)
+            if os.environ.get('CAFFEINATE_ENABLED') == '1':
                 logger.info("✅ caffeinate 감지됨 - Sleep 모드가 방지되고 있습니다")
                 logger.info("💡 프로세스 완료 후 절전 모드가 자동으로 복구됩니다")
                 return True
-            else:
-                logger.warning("⚠️  caffeinate 없이 실행 중입니다")
-                logger.warning("💡 권장: caffeinate -i python scripts/run_experiments.py")
-                logger.warning("💡 또는: make experiments-safe")
-                return False
+            
+            # 방법 2: 부모 프로세스 확인
+            try:
+                parent_pid = os.getppid()
+                result = subprocess.run(
+                    ["ps", "-p", str(parent_pid)],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                # caffeinate는 일반적으로 상위 프로세스에 있을 수 있음
+                if "caffeinate" in result.stdout:
+                    logger.info("✅ caffeinate 감지됨 - Sleep 모드가 방지되고 있습니다")
+                    logger.info("💡 프로세스 완료 후 절전 모드가 자동으로 복구됩니다")
+                    return True
+            except:
+                pass
+            
+            # caffeinate를 찾지 못한 경우
+            logger.warning("⚠️  caffeinate 없이 실행 중입니다")
+            logger.warning("💡 권장: caffeinate -i python scripts/run_experiments.py")
+            logger.warning("💡 또는: make experiments-safe")
+            return False
+            
         except Exception as e:
             logger.debug(f"caffeinate 확인 실패: {e}")
             return False

@@ -61,7 +61,7 @@ train-safe:
 	@echo "🛡️  Sleep 모드 방지 + 단일 학습 시작"
 	@echo "💡 프로세스 완료 후 절전 모드가 자동으로 복구됩니다 ✅"
 	@echo ""
-	caffeinate -i python scripts/train.py training.epochs=100
+	CAFFEINATE_ENABLED=1 caffeinate -i python scripts/train.py training.epochs=100
 
 # ============================================================================
 # 실험 명령어
@@ -75,7 +75,7 @@ experiments-safe:
 	@echo "🛡️  Sleep 모드 방지 + 순차 실험 시작"
 	@echo "💡 프로세스 완료 후 절전 모드가 자동으로 복구됩니다 ✅"
 	@echo ""
-	caffeinate -i python scripts/run_experiments.py
+	CAFFEINATE_ENABLED=1 caffeinate -i python scripts/run_experiments.py
 
 # ============================================================================
 # 빠른 테스트
