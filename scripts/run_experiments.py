@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """
-run_experiments.py: 순차적 실험 실행 스크립트
+run_experiments.py: 순차적 실험 실행 스크립트 (분석 기반 최적화)
 
-여러 실험을 순차적으로 실행하며, 각 실험이 조기 종료되면 
-자동으로 다음 실험이 시작됩니다.
+종합 실험 분석 결과를 반영한 최적화된 실험 설정:
+- ✅ Baseline & DeepModel: 완료 (최고 성능 달성)
+- 🔄 남은 실험: 비교 분석 또는 세밀 튜닝
+
+분석 결론:
+  1. DeepModel (h=256, l=3): 최고 성능 (Val Loss=10.2005)
+  2. Baseline (h=256, l=2): 최고 효율 (Val Loss=10.2345)
+  3. WideModel (h=512, l=2): LR=0.0005 필수 (Val Loss=10.2447)
+  
+권장사항:
+  - 현재 최적 모델: DeepModel (h=256, l=3, LR=0.001)
+  - 향후 실험: 하이퍼파라미터 미세 조정 또는 배치 정규화 추가
 
 caffeinate를 통해 실행 시 macOS에서 Sleep 모드가 방지됩니다.
 프로세스 완료 후 절전 모드가 자동으로 복구됩니다.
-
-실험 구성:
-1. Baseline (기본 설정)
-2. Deep Model (더 깊은 모델)
-3. Wide Model (더 넓은 모델)
-4. Large Latent (큰 잠재 차원)
-5. Optimized (최적화된 설정)
 """
 
 import os
@@ -83,86 +86,86 @@ def check_caffeinate():
 # ============================================================================
 
 EXPERIMENTS = [
-    {
-        "name": "01_Baseline",
-        "description": "기본 설정",
-        "params": {
-            "model.hidden_dim": 256,
-            "model.num_layers": 2,
-            "model.latent_state_dim": 16,
-            "model.latent_policy_dim": 32,
-            "model.latent_transition_dim": 32,
-            "training.batch_size": 32,
-            "training.learning_rate": 0.001,
-            "training.epochs": 200,
-            "training.early_stopping_patience": 5,
-            "training.use_wandb": True,
-        }
-    },
-    {
-        "name": "02_DeepModel",
-        "description": "더 깊은 모델 (3 layers)",
-        "params": {
-            "model.hidden_dim": 256,
-            "model.num_layers": 3,
-            "model.latent_state_dim": 16,
-            "model.latent_policy_dim": 32,
-            "model.latent_transition_dim": 32,
-            "training.batch_size": 32,
-            "training.learning_rate": 0.001,
-            "training.epochs": 200,
-            "training.early_stopping_patience": 5,
-            "training.use_wandb": True,
-        }
-    },
-    {
-        "name": "03_WideModel",
-        "description": "더 넓은 모델 (512 hidden)",
-        "params": {
-            "model.hidden_dim": 512,
-            "model.num_layers": 2,
-            "model.latent_state_dim": 16,
-            "model.latent_policy_dim": 32,
-            "model.latent_transition_dim": 32,
-            "training.batch_size": 32,
-            "training.learning_rate": 0.001,
-            "training.epochs": 200,
-            "training.early_stopping_patience": 5,
-            "training.use_wandb": True,
-        }
-    },
-    {
-        "name": "04_LargeLatent",
-        "description": "큰 잠재 차원",
-        "params": {
-            "model.hidden_dim": 256,
-            "model.num_layers": 2,
-            "model.latent_state_dim": 32,
-            "model.latent_policy_dim": 64,
-            "model.latent_transition_dim": 64,
-            "training.batch_size": 32,
-            "training.learning_rate": 0.001,
-            "training.epochs": 200,
-            "training.early_stopping_patience": 5,
-            "training.use_wandb": True,
-        }
-    },
-    {
-        "name": "05_Optimized",
-        "description": "최적화된 설정 (512 hidden + large latent)",
-        "params": {
-            "model.hidden_dim": 512,
-            "model.num_layers": 2,
-            "model.latent_state_dim": 32,
-            "model.latent_policy_dim": 64,
-            "model.latent_transition_dim": 64,
-            "training.batch_size": 32,
-            "training.learning_rate": 0.0005,
-            "training.epochs": 200,
-            "training.early_stopping_patience": 5,
-            "training.use_wandb": True,
-        }
-    },
+    # ================================================================================
+    # ✅ COMPLETED EXPERIMENTS
+    # ================================================================================
+    # 분석 결과 이미 완료된 실험들
+    # 재실행이 필요하면 주석을 해제하세요
+    
+    # {
+    #     "name": "01_Baseline",
+    #     "description": "기본 설정 (최고 효율)",
+    #     "status": "✅ COMPLETED - Val Loss: 10.2345, Epochs: 10",
+    #     "params": {
+    #         "model.hidden_dim": 256,
+    #         "model.num_layers": 2,
+    #         "model.latent_state_dim": 16,
+    #         "model.latent_policy_dim": 32,
+    #         "model.latent_transition_dim": 32,
+    #         "training.learning_rate": 0.001,
+    #         ...
+    #     }
+    # },
+    # {
+    #     "name": "02_DeepModel",
+    #     "description": "더 깊은 모델 - 3 layers (최고 성능)",
+    #     "status": "✅ COMPLETED - Val Loss: 10.2005, Epochs: 25 ⭐ BEST",
+    #     "params": {
+    #         "model.hidden_dim": 256,
+    #         "model.num_layers": 3,  # ← 유일한 차이
+    #         "training.learning_rate": 0.001,
+    #         ...
+    #     }
+    # },
+    
+    # ================================================================================
+    # 🎯 RECOMMENDED NEXT EXPERIMENTS (선택 실행)
+    # ================================================================================
+    # 이 실험들은 참고용이며, 필요에 따라 실행하세요
+    
+    # {
+    #     "name": "03_WideModel_Fine_Tuning",
+    #     "description": "넓은 모델 미세 조정 (h=384, l=3, LR=0.0008)",
+    #     "status": "📋 DeepModel과 WideModel의 중간 구조",
+    #     "params": {
+    #         "model.hidden_dim": 384,
+    #         "model.num_layers": 3,  # DeepModel처럼 3층
+    #         "model.latent_state_dim": 16,
+    #         "model.latent_policy_dim": 32,
+    #         "model.latent_transition_dim": 32,
+    #         "training.learning_rate": 0.0008,  # 미세 조정
+    #         "training.batch_size": 32,
+    #         "training.epochs": 200,
+    #         "training.early_stopping_patience": 5,
+    #         "training.use_wandb": True,
+    #     }
+    # },
+    # {
+    #     "name": "04_BatchNorm_Experiment",
+    #     "description": "배치 정규화 추가 (DeepModel 기반)",
+    #     "status": "📋 안정성 및 학습률 감도 개선 기대",
+    #     "params": {
+    #         "model.hidden_dim": 256,
+    #         "model.num_layers": 3,
+    #         "model.use_batch_norm": True,  # ← 새로운 기능
+    #         "training.learning_rate": 0.0015,  # 더 높은 LR 가능
+    #         ...
+    #     }
+    # },
+    # {
+    #     "name": "05_LR_Schedule_Experiment",
+    #     "description": "학습률 스케줄 (단계적 감소)",
+    #     "status": "📋 미세 조정 향상 기대",
+    #     "params": {
+    #         "model.hidden_dim": 256,
+    #         "model.num_layers": 3,
+    #         "training.use_lr_schedule": True,
+    #         "training.initial_learning_rate": 0.001,
+    #         "training.lr_decay_factor": 0.5,
+    #         "training.lr_decay_epochs": [10, 20],
+    #         ...
+    #     }
+    # },
 ]
 
 
@@ -254,6 +257,28 @@ def main():
     logger.info("=" * 80)
     logger.info("🚀 순차 실험 시작")
     logger.info("=" * 80)
+    
+    # 실험 목록 확인
+    if not EXPERIMENTS:
+        logger.warning("\n" + "=" * 80)
+        logger.warning("⚠️  실행할 실험이 없습니다")
+        logger.warning("=" * 80)
+        logger.info("\n📊 완료된 실험 요약:")
+        logger.info("\n✅ Baseline (01)")
+        logger.info("   - Val Loss: 10.2345 (최고 효율)")
+        logger.info("   - Epochs: 10 (가장 빠름)")
+        logger.info("   - Config: h=256, l=2, z=16/32/32, LR=0.001")
+        logger.info("\n✅ DeepModel (02) ⭐ 권장")
+        logger.info("   - Val Loss: 10.2005 (최고 성능)")
+        logger.info("   - Epochs: 25 (최적 수렴)")
+        logger.info("   - Config: h=256, l=3, z=16/32/32, LR=0.001")
+        logger.info("\n🎯 다음 단계:")
+        logger.info("   1. 현재 권장 모델: DeepModel 사용")
+        logger.info("   2. 필요시 미세 조정 실험 추가")
+        logger.info("   3. scripts/run_experiments.py에서 주석 해제하여 재실행")
+        logger.info("\n📄 자세한 분석: docs/[04] ExperimentResults.md 참고")
+        logger.warning("\n" + "=" * 80)
+        return
     
     start_time = datetime.now()
     results = {
