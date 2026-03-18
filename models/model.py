@@ -482,12 +482,16 @@ class VRAE(nn.Module):
         self.fc_mu_c = nn.Linear(rnn_hidden_dim * 2, latent_dim_c)
         self.fc_logvar_c = nn.Linear(rnn_hidden_dim * 2, latent_dim_c)
         
-        # 디코더
-        decoder_input_dim = latent_dim_a + latent_dim_b + latent_dim_c + context_dim + 4
+        # 디코더 (최적화: z_a, z_b, z_c는 배치-레벨 정보이므로 시간축 확장 전에 처리)
+        # 디코더 입력: w_emb(4) 만 시간축 정보 (z는 배치 레벨 - 프리픽스로 처리)
+        decoder_input_dim = 4  # w_emb만
         self.decoder = GRUDecoder(decoder_input_dim, rnn_hidden_dim)
         
-        self.fc_decoder_a = nn.Linear(rnn_hidden_dim * 2, action_dim)
-        self.fc_decoder_s = nn.Linear(rnn_hidden_dim * 2, state_dim)
+        # z를 디코더 출력과 통합하기 위한 퓨전 레이어
+        self.z_fusion = nn.Linear(rnn_hidden_dim * 2 + latent_dim_a + latent_dim_b + latent_dim_c, rnn_hidden_dim)
+        
+        self.fc_decoder_a = nn.Linear(rnn_hidden_dim, action_dim)
+        self.fc_decoder_s = nn.Linear(rnn_hidden_dim, state_dim)
         
         # Policy & Transition Networks
         self.policy = PolicyNetwork(
@@ -627,6 +631,9 @@ class VRAE(nn.Module):
         """
         디코더: 잠재변수 → 행동/상태 재구성
         
+        최적화: z_a, z_b, z_c는 시간-불변 정보이므로 직접 GRU 입력에 포함하지 않음
+               대신 GRU 출력 후에 퓨전 레이어에서 결합
+        
         Args:
             z_a: (B, k_a, latent_dim_a)
             z_b: (B, k_b, latent_dim_b)
@@ -643,8 +650,16 @@ class VRAE(nn.Module):
         z_b_sample = z_b[:, 0]  # (B, latent_dim_b)
         z_c_sample = z_c[:, 0]  # (B, latent_dim_c)
         
-        # z 확장 (시간 축)
-        z = mx.concatenate(
+        # 컨텍스트 임베딩만 사용 (w_emb)
+        w_int = w.astype(mx.int32)
+        w_emb = self.context_embed(w_int)  # (B, T, 1, 4)
+        w_emb = mx.squeeze(w_emb, axis=2)  # (B, T, 4)
+        
+        # 디코더 입력: w_emb만 (시간축 정보)
+        h = self.decoder(w_emb)  # (B, T, rnn_hidden_dim * 2)
+        
+        # z를 시간축에 브로드캐스트하여 퓨전 레이어 입력으로 사용
+        z_concat = mx.concatenate(
             [
                 mx.expand_dims(z_a_sample, 1),
                 mx.expand_dims(z_b_sample, 1),
@@ -652,23 +667,18 @@ class VRAE(nn.Module):
             ],
             axis=-1
         )  # (B, 1, latent_dim_a + latent_dim_b + latent_dim_c)
-        z = mx.broadcast_to(z, (B, T, z.shape[-1])) # (B, T, sum_latent_dims)
         
-        # 컨텍스트 임베딩
-        w_int = w.astype(mx.int32)
-        w_emb = self.context_embed(w_int)  # (B, T, 1, 4)
-        w_emb = mx.squeeze(w_emb, axis=2)  # (B, T, 4)
+        z_concat = mx.broadcast_to(z_concat, (B, T, z_concat.shape[-1]))  # (B, T, sum_latent_dims)
         
-        # 디코더 입력
-        x = mx.concatenate([z, w, w_emb], axis=-1)  # (B, T, decoder_input_dim)
+        # h와 z 결합
+        h_z = mx.concatenate([h, z_concat], axis=-1)  # (B, T, rnn_hidden_dim*2 + sum_latent_dims)
         
-        # 디코더
-        h = self.decoder(x) # (B, T, rnn_hidden_dim * 2)
+        # 퓨전 레이어: 차원 축소
+        h_fused = nn.relu(self.z_fusion(h_z))  # (B, T, rnn_hidden_dim)
         
         # 재구성
-        # fc 레이어는 추가 차원을 자동으로 처리
-        a_recon = self.fc_decoder_a(h)  # (B, T, action_dim)
-        s_recon = self.fc_decoder_s(h)  # (B, T, state_dim)
+        a_recon = self.fc_decoder_a(h_fused)  # (B, T, action_dim)
+        s_recon = self.fc_decoder_s(h_fused)  # (B, T, state_dim)
         
         return a_recon, s_recon
     
