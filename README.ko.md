@@ -51,7 +51,7 @@
 
 이 세 요인의 조합을 샘플링하면 (5 x 5 x 5 = **125가지 다양한 궤적**), 동일한 초기 조건에서 그럴듯한 행동 미래의 스펙트럼을 생성할 수 있습니다.
 
-이 프로젝트는 [PIP_Project](https://github.com/neomakes/PIP_Project)의 **ML 백본** 역할을 하며, 개인화된 웰니스 인텔리전스를 제공합니다. BT 기반 다중 로봇 제어 연구 — 불확실성 하의 에이전트 의사결정 모델링 — 에서 영감을 받았습니다.
+이 프로젝트는 [NeoPIP](https://github.com/neomakes/neopip)의 **ML 백본** 역할을 하며, 개인화된 웰니스 인텔리전스를 제공합니다. BT 기반 다중 로봇 제어 연구 — 불확실성 하의 에이전트 의사결정 모델링 — 에서 영감을 받았습니다.
 
 ---
 
@@ -254,8 +254,8 @@ neomind/
 
 ## 관련 프로젝트
 
-- **[PIP_Project](https://github.com/neomakes/PIP_Project)** — Personal Intelligence Platform. NeoMind는 PIP의 웰니스 인텔리전스 기능을 위한 ML 백본 역할을 합니다.
-- **[iphoneLogger](https://github.com/neomakes/iphonelogger)** — 멀티모달 센서 로깅. 행동 모델링에 필요한 원시 물리 데이터 패턴을 제공합니다.
+- **[NeoPIP](https://github.com/neomakes/neopip)** — Personal Intelligence Platform. NeoMind는 NeoPIP의 웰니스 인텔리전스 기능을 위한 ML 백본 역할을 합니다.
+- **[NeoSense](https://github.com/neomakes/neosense)** — 멀티모달 센서 로깅. 행동 모델링에 필요한 원시 물리 데이터 패턴을 제공합니다.
 
 ---
 
@@ -284,7 +284,7 @@ neomind/
 - [ ] beta-VAE 접근법 시도 (잠재 변수별 개별 beta 가중치)
 - [ ] 궤적 다양성 지표 추가 (커버리지, 궤적 간 거리)
 - [ ] 정량적 성능 평가 스크립트
-- [ ] 실제 사용자 데이터 연동 (iphoneLogger 파이프라인)
+- [ ] 실제 사용자 데이터 연동 (NeoSense 파이프라인)
 
 ---
 

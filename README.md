@@ -51,7 +51,7 @@ The core insight: human behavior can be decomposed into three latent factors:
 
 By sampling combinations of these factors (5 x 5 x 5 = **125 diverse trajectories**), the model generates a spectrum of plausible behavioral futures from the same starting conditions.
 
-This project serves as the **ML backbone** for [PIP_Project](https://github.com/neomakes/PIP_Project), providing personalized wellness intelligence. The approach draws on heritage from BT-based multi-robot control research — modeling agent decision-making under uncertainty.
+This project serves as the **ML backbone** for [NeoPIP](https://github.com/neomakes/neopip), providing personalized wellness intelligence. The approach draws on heritage from BT-based multi-robot control research — modeling agent decision-making under uncertainty.
 
 ---
 
@@ -254,8 +254,8 @@ neomind/
 
 ## Related Projects
 
-- **[PIP_Project](https://github.com/neomakes/PIP_Project)** — Personal Intelligence Platform. NeoMind serves as the ML backbone for PIP's wellness intelligence features.
-- **[iphoneLogger](https://github.com/neomakes/iphonelogger)** — Multi-modal sensor logging. Provides raw physical data patterns that inform behavioral modeling.
+- **[NeoPIP](https://github.com/neomakes/neopip)** — Personal Intelligence Platform. NeoMind serves as the ML backbone for NeoPIP's wellness intelligence features.
+- **[NeoSense](https://github.com/neomakes/neosense)** — Multi-modal sensor logging. Provides raw physical data patterns that inform behavioral modeling.
 
 ---
 
@@ -284,7 +284,7 @@ neomind/
 - [ ] Try beta-VAE approach (separate beta weights per latent variable)
 - [ ] Add trajectory diversity metrics (coverage, inter-trajectory distance)
 - [ ] Quantitative performance evaluation script
-- [ ] Real user data integration (from iphoneLogger pipeline)
+- [ ] Real user data integration (from NeoSense pipeline)
 
 ---
 
