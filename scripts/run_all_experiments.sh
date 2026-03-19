@@ -3,7 +3,7 @@
 
 cd "$(dirname "$0")/.." || exit 1
 
-echo "🚀 FitnessTracker VRAE 순차 실험 시작"
+echo "🚀 NeoMind VRAE 순차 실험 시작"
 echo "환경: $(conda info --envs | grep '*' | awk '{print $1}')"
 echo ""
 

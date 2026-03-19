@@ -86,7 +86,7 @@ def main():
             result = subprocess.run(
                 cmd,
                 shell=True,
-                cwd="/Users/neo/ACCEL/WienerMachine/Benchmark/FitnessTracker"
+                cwd="/Users/neo/neomakes/neomind"
             )
             
             if result.returncode == 0:

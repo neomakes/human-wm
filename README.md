@@ -1,19 +1,31 @@
-# humanWorldModel
+<p align="center">
+  <img src="assets/banner.svg" alt="NeoMind Banner" width="100%" />
+</p>
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
-[![MLX](https://img.shields.io/badge/Framework-MLX-black.svg)](https://ml-explore.github.io/mlx/build/html/index.html)
-[![Hydra](https://img.shields.io/badge/Config-Hydra-89b8cd.svg)](https://hydra.cc/)
-[![W&B](https://img.shields.io/badge/Logging-W%26B-yellow.svg)](https://wandb.ai)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Research%20%2F%20On%20Hold-orange.svg)]()
+<p align="center">
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python"></a>
+  <a href="https://jupyter.org"><img src="https://img.shields.io/badge/Jupyter-Notebook-orange.svg" alt="Jupyter"></a>
+  <a href="https://ml-explore.github.io/mlx/build/html/index.html"><img src="https://img.shields.io/badge/Framework-MLX-black.svg" alt="MLX"></a>
+  <a href="https://hydra.cc/"><img src="https://img.shields.io/badge/Config-Hydra-89b8cd.svg" alt="Hydra"></a>
+  <a href="https://wandb.ai"><img src="https://img.shields.io/badge/Logging-W%26B-yellow.svg" alt="W&B"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License"></a>
+  <a href=""><img src="https://img.shields.io/badge/Status-Research%20%2F%20On%20Hold-orange.svg" alt="Status"></a>
+</p>
 
-VRAE-based human behavior trajectory modeling — learning personalized activity patterns from sparse health data and generating diverse behavioral scenarios.
+<p align="center">
+  <b>VRAE-based human behavior trajectory modeling</b><br>
+  Learning personalized activity patterns from sparse health data and generating diverse behavioral scenarios.
+</p>
+
+<p align="center">
+  <a href="README.ko.md">한국어</a>
+</p>
 
 ---
 
 ## Table of Contents
 
-- [Background \& Motivation](#background--motivation)
+- [Background & Motivation](#background--motivation)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Installation](#installation)
@@ -30,7 +42,7 @@ VRAE-based human behavior trajectory modeling — learning personalized activity
 
 ## Background & Motivation
 
-Health and wellness data is inherently **sparse** — users don't log every meal, workout, or mood change. Traditional models struggle with this irregularity. humanWorldModel addresses this with a **Variational Recurrent Autoencoder (VRAE)** that learns decision dynamics from incomplete data.
+Health and wellness data is inherently **sparse** — users don't log every meal, workout, or mood change. Traditional models struggle with this irregularity. NeoMind addresses this with a **Variational Recurrent Autoencoder (VRAE)** that learns decision dynamics from incomplete data.
 
 The core insight: human behavior can be decomposed into three latent factors:
 - **Initial state diversity** (z_a) — baseline individual characteristics
@@ -116,8 +128,8 @@ Where:
 ### Setup
 
 ```bash
-git clone https://github.com/neomakes/humanWorldModel.git
-cd humanWorldModel
+git clone https://github.com/neomakes/neomind.git
+cd neomind
 pip install mlx hydra-core wandb numpy tqdm pandas
 ```
 
@@ -147,7 +159,7 @@ python scripts/train.py \
 wandb login
 python scripts/train.py \
   training.use_wandb=true \
-  wandb.project="humanWorldModel" \
+  wandb.project="neomind-vrae" \
   training.epochs=100
 ```
 
@@ -214,7 +226,7 @@ python scripts/train.py \
 ## Project Structure
 
 ```
-humanWorldModel/
+neomind/
 ├── conf/                        # Hydra configuration
 │   ├── config.yaml              # Main config (data paths, W&B)
 │   ├── model/
@@ -242,7 +254,7 @@ humanWorldModel/
 
 ## Related Projects
 
-- **[PIP_Project](https://github.com/neomakes/PIP_Project)** — Personal Intelligence Platform. humanWorldModel serves as the ML backbone for PIP's wellness intelligence features.
+- **[PIP_Project](https://github.com/neomakes/PIP_Project)** — Personal Intelligence Platform. NeoMind serves as the ML backbone for PIP's wellness intelligence features.
 - **[iphoneLogger](https://github.com/neomakes/iphonelogger)** — Multi-modal sensor logging. Provides raw physical data patterns that inform behavioral modeling.
 
 ---

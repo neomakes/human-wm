@@ -230,9 +230,9 @@ def run_experiment(experiment: Dict[str, Any], experiment_idx: int, total_experi
         result = subprocess.run(
             cmd,
             shell=True,
-            cwd="/Users/neo/ACCEL/WienerMachine/Benchmark/FitnessTracker"
+            cwd="/Users/neo/neomakes/neomind"
         )
-        
+
         if result.returncode == 0:
             logger.info(f"✅ [{exp_name}] 완료")
             return True
@@ -336,7 +336,7 @@ def main():
         logger.info(f"  {status_emoji} {exp_result['name']}: {exp_result['status']}")
     
     # 결과 파일 저장
-    results_file = Path("/Users/neo/ACCEL/WienerMachine/Benchmark/FitnessTracker/logs") / "experiments_results.json"
+    results_file = Path("/Users/neo/neomakes/neomind/logs") / "experiments_results.json"
     results_file.parent.mkdir(parents=True, exist_ok=True)
     
     with open(results_file, "w") as f:
