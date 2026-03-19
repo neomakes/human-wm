@@ -135,7 +135,7 @@
     letter-spacing="-3"
     fill="url(#textGrad)"
     filter="url(#softGlow)"
-  >human-wm</text>
+  >HumanWM</text>
 
   <!-- Subtitle: Human World Model -->
   <text

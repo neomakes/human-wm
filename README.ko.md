@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="human-wm Banner" width="100%" />
+  <img src="assets/banner.svg" alt="HumanWM Banner" width="100%" />
 </p>
 
 <p align="center">
