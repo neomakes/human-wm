@@ -22,3 +22,9 @@ data/
 wandb/
 logs/
 *.log
+
+# macOS
+.DS_Store
+
+# OMC / Claude
+.omc/
